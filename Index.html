@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>ระบบเขียนโครงการ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap');
+    body { font-family: 'Sarabun', sans-serif; background-color: #f0f2f5; color: #1f2937; }
+    .input-field { width: 100%; border: 1px solid #d1d5db; padding: 0.6rem 0.75rem; border-radius: 0.375rem; outline: none; transition: 0.2s; background-color: #fff; }
+    .input-field:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+    .input-field:read-only { background-color: #f3f4f6; color: #6b7280; cursor: not-allowed; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.9rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
+    
+    .tab-btn { padding: 1rem; font-weight: 600; color: #6b7280; border-bottom: 3px solid transparent; cursor: pointer; transition: 0.3s; }
+    .tab-btn:hover { color: #2563eb; background-color: #f8fafc; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; background-color: #eff6ff;}
+    
+    .sub-tab-btn { padding: 0.5rem 1rem; font-weight: 500; color: #4b5563; border-radius: 0.5rem 0.5rem 0 0; cursor: pointer; transition: 0.2s; border: 1px solid transparent; border-bottom: none;}
+    .sub-tab-btn:hover { background-color: #e5e7eb; }
+    .sub-tab-btn.active { background-color: #fff; color: #1d4ed8; border-color: #d1d5db; border-bottom-color: #fff; font-weight: 600;}
+    
+    .checkbox-container { max-height: 12rem; overflow-y: auto; background-color: #fff; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; }
+    .checkbox-item { display: flex; align-items: flex-start; padding: 0.4rem; border-radius: 0.25rem; cursor: pointer; transition: 0.2s;}
+    .checkbox-item:hover { background-color: #f3f4f6; }
+    .checkbox-item input { margin-top: 0.3rem; margin-right: 0.5rem; cursor: pointer; }
+    
+    .section-card { background: #fff; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e5e7eb;}
+    .section-header { font-size: 1.15rem; font-weight: 600; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;}
+    
+    .btn-action { padding: 0.4rem 0.75rem; border-radius: 0.375rem; font-size: 0.85rem; font-weight: 500; transition: 0.2s; cursor: pointer; }
+    .btn-add { background-color: #10b981; color: white; } .btn-add:hover { background-color: #059669; }
+    .btn-edit { background-color: #3b82f6; color: white; } .btn-edit:hover { background-color: #2563eb; }
+    .btn-delete { background-color: #ef4444; color: white; } .btn-delete:hover { background-color: #dc2626; }
+    .btn-move { background-color: #9ca3af; color: white; padding: 0.15rem 0.5rem; font-size: 0.8rem; transition: 0.2s;} .btn-move:hover { background-color: #6b7280; }
+    
+    .budget-warning { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #b91c1c !important;}
+  </style>
+</head>
+<body class="p-2 md:p-6" onload="initializeSystem()">
+
+  <script>
+    const USER_ROLE = '<?= userRole ?>';
+    const USER_EMAIL = '<?= userEmail ?>';
+  </script>
+
+  <!-- รายการ DataList อัตโนมัติ -->
+  <datalist id="teacherNamesList"></datalist>
+  <datalist id="teacherPosList"></datalist>
+  <datalist id="groupLeaderPosList"></datalist>
+
+  <div id="access-denied" class="hidden max-w-lg mx-auto bg-white rounded-xl shadow-lg overflow-hidden p-8 text-center mt-10 border-t-4 border-red-500">
+    <i class="fas fa-user-lock text-5xl text-red-500 mb-4"></i>
+    <h1 class="text-2xl font-bold text-gray-800">ไม่มีสิทธิ์เข้าถึงระบบ</h1>
+    <p class="text-gray-500 mt-2">บัญชี <span class="font-semibold text-blue-600"><?= userEmail ?></span> ไม่ได้รับอนุญาต กรุณาติดต่อผู้ดูแลระบบ</p>
+  </div>
+
+  <div id="main-app" class="hidden max-w-5xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden mb-10">
+    <div class="bg-blue-800 p-5 text-white flex justify-between items-center relative shadow-inner">
+      <h1 class="text-xl md:text-2xl font-semibold tracking-wide"><i class="fas fa-folder-open mr-2"></i> ระบบเขียนโครงการ</h1>
+      <div class="text-sm bg-blue-900 px-3 py-1.5 rounded-md border border-blue-700 flex items-center shadow-sm">
+        <i class="fas fa-user-circle mr-2 text-blue-300"></i> <span class="hidden md:inline"><?= userEmail ?></span> <span class="uppercase ml-2 text-xs bg-blue-600 px-2 py-0.5 rounded text-white font-bold" id="badge-role"></span>
+      </div>
+    </div>
+    
+    <div class="flex border-b border-gray-200 text-sm md:text-base bg-gray-50">
+      <div id="nav-sync" class="tab-btn w-1/3 text-center hidden" onclick="switchTab('sync')"><i class="fas fa-cloud-download-alt mr-1"></i> ซิงค์ข้อมูล</div>
+      <div id="nav-edit" class="tab-btn w-1/3 text-center active" onclick="switchTab('edit')"><i class="fas fa-edit mr-1"></i> เขียนโครงการ</div>
+      <div id="nav-master" class="tab-btn w-1/3 text-center hidden" onclick="switchTab('master')"><i class="fas fa-cogs mr-1"></i> ฐานข้อมูล</div>
+    </div>
+
+    <!-- แท็บ 1: ซิงค์ข้อมูล -->
+    <div id="page-sync" class="p-8 text-center min-h-[400px] flex flex-col justify-center hidden">
+      <button id="syncBtn" onclick="startSync()" class="max-w-sm mx-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded shadow transition">
+        <i class="fas fa-sync-alt mr-2"></i> ดึงข้อมูลจากไฟล์แผนปฏิบัติงาน
+      </button>
+      <div id="syncStatus" class="mt-4 hidden rounded p-3 text-sm font-medium max-w-sm mx-auto"></div>
+    </div>
+
+    <!-- แท็บ 2: เขียนโครงการ -->
+    <div id="page-edit" class="p-4 md:p-6 bg-gray-50">
+      <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 items-center">
+        <div class="w-full md:w-2/3">
+          <label class="text-gray-700 font-semibold mb-1 block">เลือกโครงการที่ต้องการดำเนินการ</label>
+          <select id="selectPlan" onchange="loadData()" class="input-field border-blue-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"><option value="">-- โหลดข้อมูลโครงการ... --</option></select>
+        </div>
+        <div class="w-full md:w-1/3 text-right">
+          <label class="text-gray-700 font-semibold mb-1 block">สถานะโครงการ</label>
+          <select id="status" class="input-field font-bold text-center bg-gray-100" disabled>
+            <option value="รออนุมัติ">รออนุมัติ</option>
+            <option value="อนุมัติแล้ว">อนุมัติแล้ว</option>
+            <option value="ไม่อนุมัติ/แก้ไข">ไม่อนุมัติ/แก้ไข</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-1">* เฉพาะ Admin อนุมัติได้</p>
+        </div>
+      </div>
+
+      <div id="loader" class="text-center py-10 hidden"><i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-3"></i><p class="text-gray-500">กำลังดึงข้อมูล...</p></div>
+
+      <form id="projectForm" class="hidden">
+        <input type="hidden" id="planId"><input type="hidden" id="rowNum">
+        <h2 id="projectNameDisplay" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b border-gray-300"></h2>
+
+        <div class="section-card bg-gradient-to-r from-blue-900 to-blue-700 border-none">
+          <h3 class="text-blue-100 font-semibold mb-3 border-b border-blue-600 pb-1"><i class="fas fa-wallet mr-2"></i>ข้อมูลงบประมาณที่ได้รับจัดสรร</h3>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+            <div class="bg-white bg-opacity-10 p-2 rounded text-center"><p class="text-blue-200 text-xs">พิจารณาให้</p><p class="font-bold text-green-300 text-lg" id="lbl-b-approved">0</p></div>
+            <div class="bg-white bg-opacity-10 p-2 rounded text-center"><p class="text-blue-200 text-xs">อุดหนุน</p><p class="font-bold text-white text-lg" id="lbl-b-udnun">0</p></div>
+            <div class="bg-white bg-opacity-10 p-2 rounded text-center"><p class="text-blue-200 text-xs">พัฒนาผู้เรียน</p><p class="font-bold text-white text-lg" id="lbl-b-patana">0</p></div>
+            <div class="bg-white bg-opacity-10 p-2 rounded text-center"><p class="text-blue-200 text-xs">รายได้สถานศึกษา</p><p class="font-bold text-white text-lg" id="lbl-b-raidai">0</p></div>
+            <div class="bg-white bg-opacity-10 p-2 rounded text-center"><p class="text-blue-200 text-xs">อื่นๆ</p><p class="font-bold text-white text-lg" id="lbl-b-other">0</p></div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3 class="section-header"><span><i class="fas fa-info-circle mr-2"></i>ส่วนที่ 1: ข้อมูลทั่วไป</span></h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="form-group"><label>ปีงบประมาณ</label><input type="text" id="year" class="input-field req-field" readonly></div>
+            <div class="form-group"><label>ลักษณะโครงการ <span class="text-red-500">*</span></label>
+              <select id="charact" class="input-field req-field">
+                <option value="โครงการต่อเนื่อง">โครงการต่อเนื่อง</option>
+                <option value="โครงการใหม่">โครงการใหม่</option>
+              </select>
+            </div>
+            <div class="form-group"><label>ฝ่าย</label><input type="text" id="department" class="input-field req-field" readonly></div>
+            <div class="form-group"><label>กลุ่มสาระการเรียนรู้</label><input type="text" id="subjectArea" class="input-field req-field" readonly></div>
+            <div class="form-group"><label>วันเริ่มต้นดำเนินงาน <span class="text-red-500">*</span></label><input type="date" id="startDate" class="input-field req-field"></div>
+            <div class="form-group"><label>วันสิ้นสุดดำเนินงาน <span class="text-red-500">*</span></label><input type="date" id="endDate" class="input-field req-field"></div>
+            <div class="form-group md:col-span-2"><label>ผู้รับผิดชอบโครงการ</label><input type="text" id="manager" class="input-field req-field" readonly></div>
+            
+            <div class="form-group md:col-span-2"><label>กลยุทธ์โรงเรียน (เลือกได้หลายข้อ)</label><div id="box-strategy" class="checkbox-container grid grid-cols-1 md:grid-cols-2 gap-1"></div></div>
+            <div class="form-group md:col-span-2"><label>มาตรฐาน สพฐ. (เลือกได้หลายข้อ)</label><div id="box-stdObec" class="checkbox-container grid grid-cols-1 md:grid-cols-2 gap-1"></div></div>
+            <div class="form-group md:col-span-2"><label>มาตรฐาน รร. ในฝัน (เลือกได้หลายข้อ)</label><div id="box-stdDream" class="checkbox-container grid grid-cols-1 md:grid-cols-2 gap-1"></div></div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3 class="section-header"><span><i class="fas fa-list-ul mr-2"></i>ส่วนที่ 2: รายละเอียดโครงการ</span></h3>
+          <div class="space-y-4">
+            <div class="border rounded p-3 bg-gray-50"><label class="font-semibold text-gray-700 mb-2">1. หลักการและเหตุผล</label><div class="flex gap-2 mb-2"><input type="text" id="in-หลักการ-0" class="input-field" placeholder="ระบุหลักการ..."><button type="button" onclick="addSubItem('หลักการ', ['in-หลักการ-0'])" class="btn-action btn-add shrink-0"><i class="fas fa-plus"></i></button></div><ul id="list-หลักการ" class="space-y-1 text-sm"></ul></div>
+            <div class="border rounded p-3 bg-gray-50"><label class="font-semibold text-gray-700 mb-2">2. วัตถุประสงค์</label><div class="flex gap-2 mb-2"><input type="text" id="in-วัตถุประสงค์-0" class="input-field" placeholder="ระบุวัตถุประสงค์..."><button type="button" onclick="addSubItem('วัตถุประสงค์', ['in-วัตถุประสงค์-0'])" class="btn-action btn-add shrink-0"><i class="fas fa-plus"></i></button></div><ul id="list-วัตถุประสงค์" class="space-y-1 text-sm"></ul></div>
+            <div class="border rounded p-3 bg-gray-50"><label class="font-semibold text-gray-700 mb-2">3. เป้าหมายเชิงปริมาณ</label><div class="flex gap-2 mb-2"><input type="text" id="in-เป้าหมายเชิงปริมาณ-0" class="input-field" placeholder="เช่น ผู้เข้าร่วม 100 คน..."><button type="button" onclick="addSubItem('เป้าหมายเชิงปริมาณ', ['in-เป้าหมายเชิงปริมาณ-0'])" class="btn-action btn-add shrink-0"><i class="fas fa-plus"></i></button></div><ul id="list-เป้าหมายเชิงปริมาณ" class="space-y-1 text-sm"></ul></div>
+            <div class="border rounded p-3 bg-gray-50"><label class="font-semibold text-gray-700 mb-2">4. เป้าหมายเชิงคุณภาพ</label><div class="flex gap-2 mb-2"><input type="text" id="in-เป้าหมายเชิงคุณภาพ-0" class="input-field" placeholder="เช่น ผู้เข้าร่วมมีความเข้าใจ..."><button type="button" onclick="addSubItem('เป้าหมายเชิงคุณภาพ', ['in-เป้าหมายเชิงคุณภาพ-0'])" class="btn-action btn-add shrink-0"><i class="fas fa-plus"></i></button></div><ul id="list-เป้าหมายเชิงคุณภาพ" class="space-y-1 text-sm"></ul></div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3 class="section-header">
+            <span><i class="fas fa-tasks mr-2"></i>ส่วนที่ 3: แผนการดำเนินงาน</span>
+            <span id="budget-checker" class="text-sm px-3 py-1 rounded border font-normal tracking-wide shadow-sm bg-white">งบขอใช้รวม: 0 / 0</span>
+          </h3>
+          <div class="overflow-x-auto border rounded">
+            <table class="w-full text-sm text-left border-collapse min-w-[800px]">
+              <thead><tr class="bg-gray-100 text-gray-700"><th class="p-2 border">กิจกรรม/การดำเนินงาน</th><th class="p-2 border w-20">ภาคเรียน</th><th class="p-2 border w-32">เริ่ม</th><th class="p-2 border w-32">สิ้นสุด</th><th class="p-2 border w-24 text-red-600">งบขอใช้</th><th class="p-2 border w-40">ผู้รับผิดชอบ</th><th class="p-2 border w-28 text-center">จัดการ</th></tr></thead>
+              <tbody id="list-การดำเนินงาน" class="bg-white"></tbody>
+              <tfoot>
+                <tr class="bg-blue-50">
+                  <td class="p-1 border"><input type="text" id="op-0" class="w-full p-1 border rounded" placeholder="เพิ่มกิจกรรมใหม่..."></td>
+                  <td class="p-1 border"><input type="text" id="op-1" class="w-full p-1 border rounded" placeholder="1/2569"></td>
+                  <td class="p-1 border"><input type="date" id="op-2" class="w-full p-1 border rounded text-xs"></td>
+                  <td class="p-1 border"><input type="date" id="op-3" class="w-full p-1 border rounded text-xs"></td>
+                  <td class="p-1 border"><input type="number" id="op-4" class="w-full p-1 border rounded font-semibold text-red-600" placeholder="0"></td>
+                  <td class="p-1 border"><input type="text" id="op-5" class="w-full p-1 border rounded" list="teacherNamesList"></td>
+                  <td class="p-1 border text-center"><button type="button" onclick="addSubItem('การดำเนินงาน', ['op-0','op-1','op-2','op-3','op-4','op-5'])" class="btn-action btn-add w-full"><i class="fas fa-plus"></i></button></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3 class="section-header"><span><i class="fas fa-clipboard-check mr-2"></i>ส่วนที่ 4: การนิเทศติดตามและประเมินผล</span></h3>
+          <div class="overflow-x-auto border rounded">
+            <table class="w-full text-sm text-left border-collapse min-w-[600px]">
+              <thead><tr class="bg-gray-100 text-gray-700"><th class="p-2 border">ตัวชี้วัดความสำเร็จ</th><th class="p-2 border">วิธีการประเมิน</th><th class="p-2 border">เครื่องมือที่ใช้</th><th class="p-2 border">การนิเทศติดตาม</th><th class="p-2 border w-28 text-center">จัดการ</th></tr></thead>
+              <tbody id="list-การนิเทศติดตามและประเมินผล" class="bg-white"></tbody>
+              <tfoot>
+                <tr class="bg-blue-50">
+                  <td class="p-1 border"><input type="text" id="ev-0" class="w-full p-1 border rounded"></td><td class="p-1 border"><input type="text" id="ev-1" class="w-full p-1 border rounded"></td>
+                  <td class="p-1 border"><input type="text" id="ev-2" class="w-full p-1 border rounded"></td><td class="p-1 border"><input type="text" id="ev-3" class="w-full p-1 border rounded"></td>
+                  <td class="p-1 border text-center"><button type="button" onclick="addSubItem('การนิเทศติดตามและประเมินผล', ['ev-0','ev-1','ev-2','ev-3'])" class="btn-action btn-add w-full"><i class="fas fa-plus"></i></button></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <h3 class="section-header"><span><i class="fas fa-award mr-2"></i>ส่วนที่ 5: ผลและหน่วยงานที่เกี่ยวข้อง</span></h3>
+          <div class="space-y-4">
+            <div class="border rounded p-3 bg-gray-50"><label class="font-semibold text-gray-700 mb-2">หน่วยงานที่เกี่ยวข้อง</label><div class="flex gap-2 mb-2"><input type="text" id="in-หน่วยงานที่เกี่ยวข้อง-0" class="input-field" placeholder="ระบุหน่วยงาน..."><button type="button" onclick="addSubItem('หน่วยงานที่เกี่ยวข้อง', ['in-หน่วยงานที่เกี่ยวข้อง-0'])" class="btn-action btn-add shrink-0"><i class="fas fa-plus"></i></button></div><ul id="list-หน่วยงานที่เกี่ยวข้อง" class="space-y-1 text-sm"></ul></div>
+            <div class="border rounded p-3 bg-gray-50"><label class="font-semibold text-gray-700 mb-2">ผลที่คาดว่าจะได้รับ</label><div class="flex gap-2 mb-2"><input type="text" id="in-ผลที่คาดว่าจะได้รับ-0" class="input-field" placeholder="ระบุผล..."><button type="button" onclick="addSubItem('ผลที่คาดว่าจะได้รับ', ['in-ผลที่คาดว่าจะได้รับ-0'])" class="btn-action btn-add shrink-0"><i class="fas fa-plus"></i></button></div><ul id="list-ผลที่คาดว่าจะได้รับ" class="space-y-1 text-sm"></ul></div>
+          </div>
+        </div>
+
+        <div class="section-card mb-0">
+          <h3 class="section-header"><span><i class="fas fa-pen-nib mr-2"></i>ส่วนที่ 6: บุคลากรและการลงนาม</span></h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded border">
+            <div class="form-group"><label>ชื่อผู้เสนอโครงการ <span class="text-red-500">*</span></label><input type="text" id="propName" class="input-field req-field" list="teacherNamesList"></div>
+            <div class="form-group"><label>ตำแหน่งผู้เสนอ <span class="text-red-500">*</span></label><input type="text" id="propPos" class="input-field req-field" list="teacherPosList"></div>
+            <div class="form-group"><label>ชื่อหัวหน้ากลุ่มบริหารงาน</label><input type="text" id="groupLeaderName" class="input-field" list="teacherNamesList"></div>
+            <div class="form-group"><label>ตำแหน่งกลุ่มบริหารงาน</label><input type="text" id="groupLeaderPos" class="input-field" list="groupLeaderPosList"></div>
+            <div class="form-group"><label>ชื่อผู้เห็นชอบ 1</label><input type="text" id="app1Name" class="input-field" list="teacherNamesList"></div>
+            <div class="form-group"><label>ตำแหน่งผู้เห็นชอบ 1</label><input type="text" id="app1Pos" class="input-field" list="teacherPosList"></div>
+            <div class="form-group"><label>ชื่อผู้เห็นชอบ 2</label><input type="text" id="app2Name" class="input-field" list="teacherNamesList"></div>
+            <div class="form-group"><label>ตำแหน่งผู้เห็นชอบ 2</label><input type="text" id="app2Pos" class="input-field" list="teacherPosList"></div>
+            <div class="form-group"><label>ชื่อผู้เห็นชอบ 3</label><input type="text" id="app3Name" class="input-field" list="teacherNamesList"></div>
+            <div class="form-group"><label>ตำแหน่งผู้เห็นชอบ 3</label><input type="text" id="app3Pos" class="input-field" list="teacherPosList"></div>
+            <div class="form-group"><label>ชื่อผู้อนุมัติ</label><input type="text" id="finalName" class="input-field" list="teacherNamesList"></div>
+            <div class="form-group"><label>ตำแหน่งผู้อนุมัติ</label><input type="text" id="finalPos" class="input-field" list="teacherPosList"></div>
+          </div>
+        </div>
+
+        <div class="mt-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 sticky bottom-4 z-10">
+          <button type="button" onclick="submitForm()" id="btnFinal" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 rounded shadow-lg transition text-lg tracking-wide">
+            <i class="fas fa-paper-plane mr-2"></i> บันทึกข้อมูลและส่งอนุมัติ
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- แท็บ 3: จัดการฐานข้อมูล -->
+    <!-- ============================================ -->
+    <div id="page-master" class="p-6 md:p-8 bg-gray-50 hidden">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-6"><i class="fas fa-database mr-2 text-blue-600"></i>จัดการฐานข้อมูลระบบ</h2>
+      
+      <div class="flex border-b border-gray-300 mb-6 overflow-x-auto bg-white rounded-t-lg">
+        <div class="sub-tab-btn active whitespace-nowrap" onclick="switchSubTab('sub-users')" id="stab-users"><i class="fas fa-users-cog mr-1"></i> ผู้ใช้งาน</div>
+        <div class="sub-tab-btn whitespace-nowrap" onclick="switchSubTab('sub-strategy')" id="stab-strategy">กลยุทธ์โรงเรียน</div>
+        <div class="sub-tab-btn whitespace-nowrap" onclick="switchSubTab('sub-obec')" id="stab-obec">มาตรฐาน สพฐ.</div>
+        <div class="sub-tab-btn whitespace-nowrap" onclick="switchSubTab('sub-dream')" id="stab-dream">มาตรฐาน รร.ในฝัน</div>
+        <div class="sub-tab-btn whitespace-nowrap" onclick="switchSubTab('sub-groupleader')" id="stab-groupleader">ตำแหน่งหัวหน้ากลุ่ม</div>
+      </div>
+
+      <!-- Users Manager -->
+      <div id="sub-users" class="sub-content bg-white border rounded-lg p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row gap-2 mb-6 p-4 bg-gray-50 rounded border">
+          <input type="email" id="new-user-email" class="input-field flex-1" placeholder="ระบุอีเมลผู้ใช้งาน...">
+          <select id="new-user-role" class="input-field w-full md:w-32"><option value="user">User</option><option value="admin">Admin</option></select>
+          <button onclick="manageUser('add')" class="btn-action btn-add px-6 whitespace-nowrap py-2"><i class="fas fa-plus mr-1"></i> เพิ่ม</button>
+        </div>
+        <input type="text" onkeyup="searchTable('tbl-users', this.value)" class="input-field mb-3" placeholder="🔍 ค้นหาอีเมล...">
+        <div class="overflow-y-auto max-h-96 border rounded">
+          <table class="w-full text-sm text-left"><thead class="bg-gray-100 border-b"><tr><th class="p-3">Email</th><th class="p-3 w-32">Role</th><th class="p-3 w-24 text-center">จัดการ</th></tr></thead><tbody id="list-users"></tbody></table>
+        </div>
+      </div>
+
+      <!-- Master Data Templates (ใช้วนลูปสคริปต์วาดให้) -->
+      <div id="sub-strategy" class="sub-content hidden bg-white border rounded-lg p-6 shadow-sm"></div>
+      <div id="sub-obec" class="sub-content hidden bg-white border rounded-lg p-6 shadow-sm"></div>
+      <div id="sub-dream" class="sub-content hidden bg-white border rounded-lg p-6 shadow-sm"></div>
+      <div id="sub-groupleader" class="sub-content hidden bg-white border rounded-lg p-6 shadow-sm"></div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentSubData = { 'กลยุทธ์':[], 'มาตรฐาน สพฐ':[], 'มาตรฐาน รร ในฝัน':[], 'หลักการ': [], 'วัตถุประสงค์': [], 'เป้าหมายเชิงปริมาณ': [], 'เป้าหมายเชิงคุณภาพ': [], 'การดำเนินงาน': [], 'หน่วยงานที่เกี่ยวข้อง': [], 'ผลที่คาดว่าจะได้รับ': [], 'การนิเทศติดตามและประเมินผล': [] };
+    let globalMasterData = {};
+    let approvedBudgetTotal = 0;
+
+    function initializeSystem() {
+      document.getElementById('badge-role').innerText = USER_ROLE;
+      if (USER_ROLE === 'none') { document.getElementById('access-denied').classList.remove('hidden'); return; }
+      document.getElementById('main-app').classList.remove('hidden');
+      if (USER_ROLE === 'admin') {
+        document.getElementById('nav-sync').classList.remove('hidden'); document.getElementById('nav-master').classList.remove('hidden'); document.getElementById('status').disabled = false;
+      }
+      buildMasterUI('sub-strategy', 'ฐานข้อมูลกลยุทธ์โรงเรียน'); buildMasterUI('sub-obec', 'ฐานข้อมูลมาตรฐาน สพฐ'); 
+      buildMasterUI('sub-dream', 'ฐานข้อมูลมาตรฐาน รร ในฝัน'); buildMasterUI('sub-groupleader', 'ตำแหน่งหัวหน้ากลุ่ม');
+      refreshProjectDropdown(); loadMasterData();
+    }
+
+    function switchTab(tab) {
+      ['sync', 'edit', 'master'].forEach(t => { document.getElementById('page-' + t).classList.add('hidden'); document.getElementById('nav-' + t).classList.remove('active'); });
+      document.getElementById('page-' + tab).classList.remove('hidden'); document.getElementById('nav-' + tab).classList.add('active');
+      if (tab === 'edit') refreshProjectDropdown();
+    }
+
+    function switchSubTab(subId) {
+      const tabs = ['sub-users', 'sub-strategy', 'sub-obec', 'sub-dream', 'sub-groupleader'];
+      tabs.forEach(t => { document.getElementById(t).classList.add('hidden'); document.getElementById('stab-'+t.replace('sub-','')).classList.remove('active'); });
+      document.getElementById(subId).classList.remove('hidden'); document.getElementById('stab-'+subId.replace('sub-','')).classList.add('active');
+    }
+
+    // วาดโครงสร้าง UI แท็บฐานข้อมูลอัตโนมัติ
+    function buildMasterUI(containerId, sheetName) {
+      document.getElementById(containerId).innerHTML = `
+        <div class="flex flex-col md:flex-row gap-2 mb-4">
+          <input type="text" id="new-${containerId}" class="input-field flex-1" placeholder="พิมพ์ข้อมูลใหม่...">
+          <button onclick="addMasterItem('${sheetName}', 'new-${containerId}')" class="btn-action btn-add px-6 whitespace-nowrap"><i class="fas fa-plus"></i> เพิ่มรายการ</button>
+        </div>
+        <input type="text" onkeyup="searchList('list-${containerId}', this.value)" class="input-field mb-3 bg-gray-50" placeholder="🔍 ค้นหาข้อมูล...">
+        <ul id="list-${containerId}" class="space-y-2 max-h-96 overflow-y-auto pr-1"></ul>
+      `;
+    }
+
+    function searchList(listId, text) {
+      let filter = text.toUpperCase(); let li = document.getElementById(listId).getElementsByTagName('li');
+      for (let i = 0; i < li.length; i++) {
+        let inputEl = li[i].querySelector('input[type="text"]');
+        if(inputEl) {
+          let txtValue = inputEl.value;
+          li[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+        }
+      }
+    }
+    
+    function searchTable(tableId, text) {
+      let filter = text.toUpperCase(); let tr = document.getElementById(tableId).getElementsByTagName('tr');
+      for (let i = 0; i < tr.length; i++) {
+        let td = tr[i].getElementsByTagName('td')[0];
+        if(td) {
+          let inputEl = td.querySelector('input');
+          let txtValue = inputEl ? inputEl.value : td.textContent;
+          tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+        }
+      }
+    }
+
+    function loadMasterData() {
+      google.script.run.withSuccessHandler(function(data) {
+        globalMasterData = data;
+        buildCheckboxes('box-strategy', data.strategies); buildCheckboxes('box-stdObec', data.stdObec); buildCheckboxes('box-stdDream', data.stdDream);
+        document.getElementById('teacherNamesList').innerHTML = data.teacherNames.map(n => `<option value="${n}">`).join('');
+        document.getElementById('teacherPosList').innerHTML = data.teacherPositions.map(p => `<option value="${p}">`).join('');
+        document.getElementById('groupLeaderPosList').innerHTML = data.groupLeaderPos.map(p => `<option value="${p}">`).join('');
+        
+        renderMasterEditableList('list-sub-strategy', data.strategies, 'ฐานข้อมูลกลยุทธ์โรงเรียน'); 
+        renderMasterEditableList('list-sub-obec', data.stdObec, 'ฐานข้อมูลมาตรฐาน สพฐ'); 
+        renderMasterEditableList('list-sub-dream', data.stdDream, 'ฐานข้อมูลมาตรฐาน รร ในฝัน'); 
+        renderMasterEditableList('list-sub-groupleader', data.groupLeaderPos, 'ตำแหน่งหัวหน้ากลุ่ม');
+        
+        // วาดตาราง Users พร้อมฟังก์ชันแก้ไข
+        document.getElementById('list-users').innerHTML = data.users.map((u, index) => `
+          <tr class="hover:bg-gray-50 border-b">
+            <td class="p-2"><input type="email" value="${u.email}" id="edit-user-email-${index}" class="input-field py-1 text-sm bg-white"></td>
+            <td class="p-2">
+              <select id="edit-user-role-${index}" class="input-field py-1 text-sm bg-white">
+                <option value="user" ${u.role==='user'?'selected':''}>user</option>
+                <option value="admin" ${u.role==='admin'?'selected':''}>admin</option>
+              </select>
+            </td>
+            <td class="p-2 text-center whitespace-nowrap">
+              <button onclick="manageUser('edit', '${u.email}', ${index})" class="btn-action btn-edit mr-1" title="บันทึกการแก้ไข"><i class="fas fa-save"></i></button>
+              <button onclick="manageUser('del', '${u.email}')" class="btn-action btn-delete" title="ลบ"><i class="fas fa-trash-alt"></i></button>
+            </td>
+          </tr>
+        `).join('');
+        document.getElementById('list-users').id = 'tbl-users'; 
+      }).getDropdownData();
+    }
+    
+    function buildCheckboxes(containerId, items) { document.getElementById(containerId).innerHTML = items.length === 0 ? '<p class="text-sm text-gray-400">ไม่มีข้อมูล</p>' : items.map(i => `<label class="checkbox-item"><input type="checkbox" value="${i.replace(/"/g, '&quot;')}"><span>${i}</span></label>`).join(''); }
+
+    function refreshProjectDropdown() {
+      google.script.run.withSuccessHandler(function(projects) {
+        document.getElementById('selectPlan').innerHTML = '<option value="">-- กรุณาเลือกโครงการ --</option>' + projects.map(p => `<option value="${p.planId}">[${p.planId}] ${p.name.substring(0,80)}...</option>`).join('');
+      }).getProjectList();
+    }
+
+    function loadData() {
+      const planId = document.getElementById('selectPlan').value;
+      if (!planId) { document.getElementById('projectForm').classList.add('hidden'); return; }
+      document.getElementById('projectForm').classList.add('hidden'); document.getElementById('loader').classList.remove('hidden');
+      google.script.run.withSuccessHandler(fillForm).getProjectDetails(planId);
+    }
+
+    function fillForm(data) {
+      document.getElementById('loader').classList.add('hidden');
+      if (data) {
+        document.getElementById('projectForm').classList.remove('hidden');
+        document.getElementById('projectNameDisplay').innerText = data.name;
+        document.getElementById('planId').value = data.planId;
+        
+        approvedBudgetTotal = Number(data.budget.approved || 0);
+        document.getElementById('lbl-b-approved').innerText = approvedBudgetTotal.toLocaleString();
+        document.getElementById('lbl-b-udnun').innerText = Number(data.budget.udnun).toLocaleString();
+        document.getElementById('lbl-b-patana').innerText = Number(data.budget.patana).toLocaleString();
+        document.getElementById('lbl-b-raidai').innerText = Number(data.budget.raidai).toLocaleString();
+        document.getElementById('lbl-b-other').innerText = Number(data.budget.other).toLocaleString();
+
+        if(!data.app1Pos) data.app1Pos = "หัวหน้าแผนงานและประกันคุณภาพ"; if(!data.app2Pos) data.app2Pos = "รองผู้อํานวยการกลุ่มบริหารงบประมาณฯ";
+        if(!data.app3Pos) data.app3Pos = "รองผู้อํานวยการกลุ่มบริหารวิชาการ"; if(!data.finalName) data.finalName = globalMasterData.directorName || "";
+        if(!data.finalPos) data.finalPos = globalMasterData.directorPos || "";
+        if(!data.charact) data.charact = "โครงการต่อเนื่อง";
+
+        ['row','status','year','charact','startDate','endDate','department','subjectArea','manager','propName','propPos','groupLeaderName','groupLeaderPos','app1Name','app1Pos','app2Name','app2Pos','app3Name','app3Pos','finalName','finalPos'].forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = data[key]; });
+        
+        currentSubData = data.subData;
+        
+        const setCbArray = (id, arr) => { const cbs = document.getElementById(id).querySelectorAll('input'); cbs.forEach(cb => cb.checked = false); if(arr && arr.length > 0){ const flatArr = arr.map(v => v[0]); cbs.forEach(cb => { if(flatArr.includes(cb.value)) cb.checked = true; }); }};
+        setCbArray('box-strategy', currentSubData['กลยุทธ์']); setCbArray('box-stdObec', currentSubData['มาตรฐาน สพฐ']); setCbArray('box-stdDream', currentSubData['มาตรฐาน รร ในฝัน']);
+
+        ['หลักการ', 'วัตถุประสงค์', 'เป้าหมายเชิงปริมาณ', 'เป้าหมายเชิงคุณภาพ', 'การดำเนินงาน', 'หน่วยงานที่เกี่ยวข้อง', 'ผลที่คาดว่าจะได้รับ', 'การนิเทศติดตามและประเมินผล'].forEach(sheetName => renderSubItems(sheetName));
+        checkBudgetAlert();
+      }
+    }
+
+    function addSubItem(sheetName, inputIds) {
+      const values = inputIds.map(id => document.getElementById(id).value.trim());
+      // ตรวจค่าว่างบ้างให้มีข้อมูล
+      let hasData = values.some(v => v !== "");
+      if (!hasData) { alert('กรุณากรอกข้อมูลก่อนกดเพิ่ม'); return; }
+      
+      currentSubData[sheetName].push(values); inputIds.forEach(id => document.getElementById(id).value = ''); renderSubItems(sheetName);
+      if(sheetName === 'การดำเนินงาน') checkBudgetAlert();
+    }
+    
+    function removeSubItem(sheetName, index) { currentSubData[sheetName].splice(index, 1); renderSubItems(sheetName); if(sheetName === 'การดำเนินงาน') checkBudgetAlert(); }
+    
+    function editSubItem(sheetName, index, inputIds) {
+      const values = currentSubData[sheetName][index];
+      values.forEach((val, i) => { if (document.getElementById(inputIds[i])) document.getElementById(inputIds[i]).value = val; });
+      removeSubItem(sheetName, index);
+    }
+
+    function moveSubItem(sheetName, index, direction) {
+      if (direction === 'up' && index > 0) {
+        let temp = currentSubData[sheetName][index]; currentSubData[sheetName][index] = currentSubData[sheetName][index - 1]; currentSubData[sheetName][index - 1] = temp;
+      } else if (direction === 'down' && index < currentSubData[sheetName].length - 1) {
+        let temp = currentSubData[sheetName][index]; currentSubData[sheetName][index] = currentSubData[sheetName][index + 1]; currentSubData[sheetName][index + 1] = temp;
+      }
+      renderSubItems(sheetName);
+    }
+
+    function renderSubItems(sheetName) {
+      const container = document.getElementById('list-' + sheetName); container.innerHTML = '';
+      currentSubData[sheetName].forEach((row, index) => {
+        let moveBtns = `<div class="flex flex-col gap-0.5 mr-2"><button type="button" onclick="moveSubItem('${sheetName}', ${index}, 'up')" class="btn-move rounded-t"><i class="fas fa-caret-up"></i></button><button type="button" onclick="moveSubItem('${sheetName}', ${index}, 'down')" class="btn-move rounded-b"><i class="fas fa-caret-down"></i></button></div>`;
+        if (sheetName === 'การดำเนินงาน') {
+          let tds = row.map((val, i) => `<td class="p-2 border break-words text-xs ${i===4?'text-red-600 font-bold':''}">${val}</td>`).join('');
+          container.innerHTML += `<tr class="hover:bg-blue-50 transition">${tds}<td class="p-2 border text-center whitespace-nowrap flex items-center justify-center">${moveBtns}<button type="button" onclick="editSubItem('${sheetName}', ${index}, ['op-0','op-1','op-2','op-3','op-4','op-5'])" class="btn-action btn-edit mr-1"><i class="fas fa-edit"></i></button><button type="button" onclick="removeSubItem('${sheetName}', ${index})" class="btn-action btn-delete"><i class="fas fa-trash"></i></button></td></tr>`;
+        } else if (sheetName === 'การนิเทศติดตามและประเมินผล') {
+          let tds = row.map(val => `<td class="p-2 border break-words text-xs">${val}</td>`).join('');
+          container.innerHTML += `<tr class="hover:bg-blue-50 transition">${tds}<td class="p-2 border text-center whitespace-nowrap flex items-center justify-center">${moveBtns}<button type="button" onclick="editSubItem('${sheetName}', ${index}, ['ev-0','ev-1','ev-2','ev-3'])" class="btn-action btn-edit mr-1"><i class="fas fa-edit"></i></button><button type="button" onclick="removeSubItem('${sheetName}', ${index})" class="btn-action btn-delete"><i class="fas fa-trash"></i></button></td></tr>`;
+        } else {
+          container.innerHTML += `<li class="flex items-center bg-white p-2 rounded mb-2 border shadow-sm hover:shadow transition"><div class="flex-1 text-gray-700 leading-relaxed pr-2 text-sm">&bull; ${row[0]}</div><div class="flex items-center">${moveBtns}<button type="button" onclick="editSubItem('${sheetName}', ${index}, ['in-${sheetName}-0'])" class="btn-action btn-edit mr-1"><i class="fas fa-edit"></i></button><button type="button" onclick="removeSubItem('${sheetName}', ${index})" class="btn-action btn-delete"><i class="fas fa-trash"></i></button></div></li>`;
+        }
+      });
+    }
+
+    function checkBudgetAlert() {
+      let sumAct = currentSubData['การดำเนินงาน'].reduce((sum, row) => sum + Number(row[4] || 0), 0);
+      let checker = document.getElementById('budget-checker');
+      checker.innerText = `ขอใช้: ${sumAct.toLocaleString()} / พิจารณาให้: ${approvedBudgetTotal.toLocaleString()}`;
+      if (sumAct !== approvedBudgetTotal && approvedBudgetTotal > 0) {
+        checker.className = 'text-sm px-3 py-1 rounded border font-semibold budget-warning'; return false;
+      } else {
+        checker.className = 'text-sm px-3 py-1 rounded border font-semibold bg-green-100 border-green-500 text-green-700 shadow-sm'; return true;
+      }
+    }
+
+    // ฟังก์ชันบันทึกข้อมูล (ไม่บังคับบล็อก)
+    function submitForm() {
+      let reqFields = document.querySelectorAll('.req-field');
+      let missingList = [];
+      for (let i = 0; i < reqFields.length; i++) { 
+        if (!reqFields[i].value.trim()) { 
+          let labelNode = reqFields[i].closest('.form-group').querySelector('label');
+          let labelName = labelNode ? labelNode.innerText.replace('*', '').trim() : "ฟิลด์ที่ไม่ได้ระบุ";
+          missingList.push(labelName);
+        } 
+      }
+      
+      let sumAct = currentSubData['การดำเนินงาน'].reduce((sum, row) => sum + Number(row[4] || 0), 0);
+      let isBudgetMismatch = (sumAct !== approvedBudgetTotal && approvedBudgetTotal > 0);
+      
+      let warningText = "";
+      if (missingList.length > 0 || isBudgetMismatch) {
+         warningText += "⚠️ แจ้งเตือนข้อบกพร่องของเอกสาร:\n";
+         if (missingList.length > 0) warningText += "• ข้อมูลที่ยังกรอกไม่ครบ:\n  - " + missingList.join("\n  - ") + "\n";
+         if (isBudgetMismatch) warningText += "• ยอดงบประมาณที่ขอใช้ ไม่เท่ากับ งบที่พิจารณาให้\n";
+      }
+      
+      if(USER_ROLE === 'user') document.getElementById('status').value = 'รออนุมัติ';
+
+      const btnFinal = document.getElementById('btnFinal');
+      btnFinal.disabled = true; btnFinal.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>บันทึก...';
+
+      const getCbArray = (id) => Array.from(document.getElementById(id).querySelectorAll('input:checked')).map(cb=>[cb.value]);
+      currentSubData['กลยุทธ์'] = getCbArray('box-strategy');
+      currentSubData['มาตรฐาน สพฐ'] = getCbArray('box-stdObec');
+      currentSubData['มาตรฐาน รร ในฝัน'] = getCbArray('box-stdDream');
+
+      const formData = {
+        planId: document.getElementById('planId').value, row: document.getElementById('rowNum').value, status: document.getElementById('status').value, year: document.getElementById('year').value, charact: document.getElementById('charact').value, startDate: document.getElementById('startDate').value, endDate: document.getElementById('endDate').value, department: document.getElementById('department').value, subjectArea: document.getElementById('subjectArea').value, manager: document.getElementById('manager').value, propName: document.getElementById('propName').value, propPos: document.getElementById('propPos').value, groupLeaderName: document.getElementById('groupLeaderName').value, groupLeaderPos: document.getElementById('groupLeaderPos').value, app1Name: document.getElementById('app1Name').value, app1Pos: document.getElementById('app1Pos').value, app2Name: document.getElementById('app2Name').value, app2Pos: document.getElementById('app2Pos').value, app3Name: document.getElementById('app3Name').value, app3Pos: document.getElementById('app3Pos').value, finalName: document.getElementById('finalName').value, finalPos: document.getElementById('finalPos').value, subData: currentSubData 
+      };
+
+      google.script.run.withSuccessHandler(function(res) {
+        btnFinal.disabled = false; btnFinal.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> บันทึกข้อมูลและส่งอนุมัติ';
+        if (res.success) {
+           let finalMsg = '✅ ' + res.message;
+           if (warningText) {
+              finalMsg += '\n\n' + warningText + '\n(ระบบได้บันทึกและส่งให้ผู้พิจารณาตรวจสอบแล้ว)';
+           }
+           alert(finalMsg);
+        } else {
+           alert('❌ เกิดข้อผิดพลาด: ' + res.message);
+        }
+      }).saveProjectData(formData);
+    }
+
+    // --- การจัดการฐานข้อมูลแบบ Editable List เรียงลำดับตัวอักษร ---
+    function renderMasterEditableList(ulId, items, sheetName) { 
+      items.sort(); 
+      document.getElementById(ulId).innerHTML = items.map((item, index) => `
+        <li class="flex items-center gap-2 bg-gray-50 p-2 border border-gray-200 rounded mb-2 hover:bg-gray-100 transition">
+          <div class="flex flex-col gap-0.5"><button type="button" onclick="moveMasterItem('${sheetName}', ${index}, 'up')" class="btn-move rounded-t"><i class="fas fa-caret-up"></i></button><button type="button" onclick="moveMasterItem('${sheetName}', ${index}, 'down')" class="btn-move rounded-b"><i class="fas fa-caret-down"></i></button></div>
+          <input type="text" value="${item}" class="input-field py-1 text-sm bg-white" id="edit-${sheetName}-${index}">
+          <button type="button" onclick="editMasterItem('${sheetName}', '${item}', 'edit-${sheetName}-${index}')" class="btn-action btn-edit shrink-0" title="บันทึกการแก้ไข"><i class="fas fa-save"></i></button>
+          <button type="button" onclick="removeMasterItem('${sheetName}', '${item}')" class="btn-action btn-delete shrink-0" title="ลบ"><i class="fas fa-trash-alt"></i></button>
+        </li>
+      `).join(''); 
+    }
+    
+    function moveMasterItem(sheetName, index, direction) {
+      let arrKey = '';
+      if(sheetName==='ฐานข้อมูลกลยุทธ์โรงเรียน') arrKey = 'strategies';
+      else if(sheetName==='ฐานข้อมูลมาตรฐาน สพฐ') arrKey = 'stdObec';
+      else if(sheetName==='ฐานข้อมูลมาตรฐาน รร ในฝัน') arrKey = 'stdDream';
+      else if(sheetName==='ตำแหน่งหัวหน้ากลุ่ม') arrKey = 'groupLeaderPos';
+      
+      let arr = globalMasterData[arrKey];
+      if (direction === 'up' && index > 0) { let temp = arr[index]; arr[index] = arr[index - 1]; arr[index - 1] = temp; } 
+      else if (direction === 'down' && index < arr.length - 1) { let temp = arr[index]; arr[index] = arr[index + 1]; arr[index + 1] = temp; } 
+      else return;
+      google.script.run.withSuccessHandler(function(res) { if(res.success) loadMasterData(); }).updateMasterDataList(sheetName, arr);
+    }
+    
+    function addMasterItem(sheetName, inputId) {
+      const input = document.getElementById(inputId); const val = input.value;
+      if(!val) return; input.value = 'เพิ่ม...'; input.disabled = true;
+      google.script.run.withSuccessHandler(function(res) { input.value = ''; input.disabled = false; if(res.success) loadMasterData(); }).addMasterData(sheetName, val);
+    }
+    
+    function removeMasterItem(sheetName, val) { 
+      if(confirm('ลบข้อมูล "'+val+'" หรือไม่?')) { google.script.run.withSuccessHandler(function(res) { if(res.success) loadMasterData(); }).deleteMasterData(sheetName, val); } 
+    }
+    
+    function editMasterItem(sheetName, oldValue, inputId) {
+      const newValue = document.getElementById(inputId).value;
+      if(!newValue || newValue === oldValue) return;
+      if(confirm('ยืนยันการแก้ไขข้อมูลหรือไม่?')) {
+        google.script.run.withSuccessHandler(function(res) {
+          if(res.success) { loadMasterData(); } else { alert('ข้อผิดพลาด: ' + res.message); }
+        }).editMasterData(sheetName, oldValue, newValue);
+      }
+    }
+    
+    function manageUser(action, emailParam, index) {
+      if(action === 'add') {
+        const em = document.getElementById('new-user-email').value; const rl = document.getElementById('new-user-role').value;
+        if(!em) return; document.getElementById('new-user-email').value = 'กำลังเพิ่ม...';
+        google.script.run.withSuccessHandler(function(res) { document.getElementById('new-user-email').value = ''; if(res.success) loadMasterData(); }).addUser(em, rl);
+      } else if (action === 'edit') {
+        const newEm = document.getElementById('edit-user-email-' + index).value;
+        const newRl = document.getElementById('edit-user-role-' + index).value;
+        if(!newEm) return;
+        if(confirm('ยืนยันการแก้ไขข้อมูลผู้ใช้งานหรือไม่?')) {
+          google.script.run.withSuccessHandler(function(res) {
+            if(res.success) loadMasterData(); else alert('ข้อผิดพลาด: ' + res.message);
+          }).editUser(emailParam, newEm, newRl);
+        }
+      } else {
+        if(confirm('ลบสิทธิ์ของ ' + emailParam + ' หรือไม่?')) {
+          google.script.run.withSuccessHandler(function(res) { if(res.success) loadMasterData(); }).deleteUser(emailParam);
+        }
+      }
+    }
+
+    function startSync() {
+      const btn = document.getElementById('syncBtn'); const statusDiv = document.getElementById('syncStatus');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> กำลังดึง...';
+      statusDiv.classList.add('hidden');
+      google.script.run.withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> ดึงข้อมูลจากไฟล์แผน';
+        statusDiv.classList.remove('hidden'); statusDiv.className = res.success ? 'mt-4 rounded p-3 text-sm font-medium bg-green-100 text-green-700 max-w-sm mx-auto' : 'mt-4 rounded p-3 text-sm font-medium bg-red-100 text-red-700 max-w-sm mx-auto'; statusDiv.innerHTML = res.message;
+      }).syncData();
+    }
+  </script>
+</body>
+</html>
